@@ -52,18 +52,18 @@ blueprint:
             - domain: device_tracker
             - domain: person
           multiple: true
-    sirens:
-      name: Sirens & Alarms
-      description: Select the sirens, switches, input_booleans, or buttons to activate when the alarm goes off.
+    alarm_actions:
+      name: Alarm Trigger Actions
+      description: Define EXACTLY what happens when the alarm triggers. (e.g., Add Action -> Device -> Eufy -> Press Button, or Turn on Siren).
       default: []
       selector:
-        entity:
-          filter:
-            - domain: siren
-            - domain: switch
-            - domain: input_boolean
-            - domain: button
-          multiple: true
+        action: {}
+    silence_actions:
+      name: Silence Actions
+      description: Define EXACTLY what happens when you click 'Silence Alarms' on your phone. (e.g., Add Action -> Turn off Siren).
+      default: []
+      selector:
+        action: {}
     notify_device:
       name: Notification Device
       description: Select a mobile app device to receive a push notification when triggered.
@@ -73,7 +73,6 @@ blueprint:
 
 variables:
   device_trackers_var: !input device_trackers
-  sirens_var: !input sirens
 
 trigger:
   - platform: state
@@ -102,28 +101,10 @@ condition:
 mode: restart
 
 action:
-  # Action 1: Turn on sirens if any are selected
+  # Action 1: Trigger Alarms (executes user-defined actions)
   - choose:
-      - conditions:
-          - condition: template
-            value_template: "{{ sirens_var | length > 0 }}"
-        sequence:
-          - choose:
-              - conditions:
-                  - condition: template
-                    value_template: "{{ sirens_var | reject('match', '^button\\\\.') | list | length > 0 }}"
-                sequence:
-                  - service: homeassistant.turn_on
-                    target:
-                      entity_id: "{{ sirens_var | reject('match', '^button\\\\.') | list }}"
-          - choose:
-              - conditions:
-                  - condition: template
-                    value_template: "{{ sirens_var | select('match', '^button\\\\.') | list | length > 0 }}"
-                sequence:
-                  - service: button.press
-                    target:
-                      entity_id: "{{ sirens_var | select('match', '^button\\\\.') | list }}"
+      - conditions: []
+        sequence: !input alarm_actions
 
   # Action 2: Send Actionable Notification to silence alarms
   - domain: mobile_app
@@ -143,11 +124,8 @@ action:
     timeout:
       hours: 1
     continue_on_timeout: false
+    
+  # Action 3: Silence Alarms (executes user-defined actions)
   - choose:
-      - conditions:
-          - condition: template
-            value_template: "{{ sirens_var | reject('match', '^button\\\\.') | list | length > 0 }}"
-        sequence:
-          - service: homeassistant.turn_off
-            target:
-              entity_id: "{{ sirens_var | reject('match', '^button\\\\.') | list }}"
+      - conditions: []
+        sequence: !input silence_actions
