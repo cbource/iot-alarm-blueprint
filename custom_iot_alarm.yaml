@@ -54,14 +54,15 @@ blueprint:
           multiple: true
     sirens:
       name: Sirens & Alarms
-      description: Select the sirens or switches to turn on when the alarm goes off.
+      description: Select the sirens, switches, input_booleans, or buttons to activate when the alarm goes off.
       default: []
       selector:
         entity:
           filter:
             - domain: siren
             - domain: switch
-            - domain: light
+            - domain: input_boolean
+            - domain: button
           multiple: true
     notify_device:
       name: Notification Device
@@ -107,9 +108,22 @@ action:
           - condition: template
             value_template: "{{ sirens_var | length > 0 }}"
         sequence:
-          - service: homeassistant.turn_on
-            target:
-              entity_id: !input sirens
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ sirens_var | reject('match', '^button\\\\.') | list | length > 0 }}"
+                sequence:
+                  - service: homeassistant.turn_on
+                    target:
+                      entity_id: "{{ sirens_var | reject('match', '^button\\\\.') | list }}"
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ sirens_var | select('match', '^button\\\\.') | list | length > 0 }}"
+                sequence:
+                  - service: button.press
+                    target:
+                      entity_id: "{{ sirens_var | select('match', '^button\\\\.') | list }}"
 
   # Action 2: Send Actionable Notification to silence alarms
   - domain: mobile_app
@@ -132,8 +146,8 @@ action:
   - choose:
       - conditions:
           - condition: template
-            value_template: "{{ sirens_var | length > 0 }}"
+            value_template: "{{ sirens_var | reject('match', '^button\\\\.') | list | length > 0 }}"
         sequence:
           - service: homeassistant.turn_off
             target:
-              entity_id: !input sirens
+              entity_id: "{{ sirens_var | reject('match', '^button\\\\.') | list }}"
