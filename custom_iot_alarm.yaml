@@ -73,15 +73,32 @@ blueprint:
           min: 0
           max: 300
           unit_of_measurement: seconds
-    notify_device:
-      name: Notification Device
-      description: Select a mobile app device to receive a push notification when triggered.
+    notify_device_1:
+      name: Notification Device 1
+      description: Select the primary mobile app device to receive a push notification when triggered.
+      selector:
+        device:
+          integration: mobile_app
+    notify_device_2:
+      name: Notification Device 2 (Optional)
+      description: Select a second mobile app device.
+      default: "00000000000000000000000000000000"
+      selector:
+        device:
+          integration: mobile_app
+    notify_device_3:
+      name: Notification Device 3 (Optional)
+      description: Select a third mobile app device.
+      default: "00000000000000000000000000000000"
       selector:
         device:
           integration: mobile_app
 
 variables:
   device_trackers_var: !input device_trackers
+  notify_device_1: !input notify_device_1
+  notify_device_2: !input notify_device_2
+  notify_device_3: !input notify_device_3
 
 trigger:
   - platform: state
@@ -124,16 +141,48 @@ action:
       - conditions: []
         sequence: !input alarm_actions
 
-  # Action 2: Send Actionable Notification to silence alarms
+  # Notify Device 1
   - domain: mobile_app
     type: notify
-    device_id: !input notify_device
+    device_id: !input notify_device_1
     message: "⚠️ ALARM TRIGGERED by {{ trigger.to_state.name }}!"
     title: "Security Alert"
     data:
       actions:
         - action: "SILENCE_ALARM"
           title: "Silence Alarms"
+
+  # Notify Device 2
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ notify_device_2 != '00000000000000000000000000000000' }}"
+        sequence:
+          - domain: mobile_app
+            type: notify
+            device_id: !input notify_device_2
+            message: "⚠️ ALARM TRIGGERED by {{ trigger.to_state.name }}!"
+            title: "Security Alert"
+            data:
+              actions:
+                - action: "SILENCE_ALARM"
+                  title: "Silence Alarms"
+
+  # Notify Device 3
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ notify_device_3 != '00000000000000000000000000000000' }}"
+        sequence:
+          - domain: mobile_app
+            type: notify
+            device_id: !input notify_device_3
+            message: "⚠️ ALARM TRIGGERED by {{ trigger.to_state.name }}!"
+            title: "Security Alert"
+            data:
+              actions:
+                - action: "SILENCE_ALARM"
+                  title: "Silence Alarms"
   - wait_for_trigger:
       - platform: event
         event_type: mobile_app_notification_action
