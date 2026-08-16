@@ -22,5 +22,8 @@ Click the badge at the top of this page to import the blueprint directly into yo
 3. Paste the URL of the `custom_iot_alarm.yaml` file:
    `https://github.com/cbource/iot-alarm-blueprint/blob/main/custom_iot_alarm.yaml`
 
+   <img width="1060" height="1108" alt="image" src="https://github.com/user-attachments/assets/5e5b6947-8a2e-495d-acff-6f28d7f0d0cb" />
+
+
 ## License
 MIT License
