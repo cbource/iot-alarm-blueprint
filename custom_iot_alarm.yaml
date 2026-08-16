@@ -1,0 +1,123 @@
+blueprint:
+  name: Custom IoT Alarm System
+  description: >
+    A custom alarm automation blueprint. It allows you to select an input_boolean to arm/disarm the alarm, 
+    and then select multiple door/window sensors and motion sensors. 
+    If armed, any opening or motion will trigger the selected sirens and send a mobile notification.
+    Optionally, you can select device trackers so that the alarm will only trigger if everyone is away (Geo-fencing).
+  domain: automation
+  input:
+    alarm_enable:
+      name: Alarm Enable Switch
+      description: Select an input boolean to turn the alarm on and off.
+      selector:
+        entity:
+          filter:
+            domain: input_boolean
+    door_window_sensors:
+      name: Door / Window Sensors
+      description: Select the door, window, or opening sensors to monitor.
+      default: []
+      selector:
+        entity:
+          filter:
+            - domain: binary_sensor
+              device_class: door
+            - domain: binary_sensor
+              device_class: window
+            - domain: binary_sensor
+              device_class: opening
+          multiple: true
+    motion_sensors:
+      name: Motion Sensors
+      description: Select the motion, presence, or occupancy sensors to monitor.
+      default: []
+      selector:
+        entity:
+          filter:
+            - domain: binary_sensor
+              device_class: motion
+            - domain: binary_sensor
+              device_class: occupancy
+            - domain: binary_sensor
+              device_class: presence
+          multiple: true
+    device_trackers:
+      name: Device Trackers (Geo / Away Mode)
+      description: (Optional) If selected, the alarm will ONLY trigger if ALL these trackers are "not_home" (away).
+      default: []
+      selector:
+        entity:
+          filter:
+            - domain: device_tracker
+            - domain: person
+          multiple: true
+    sirens:
+      name: Sirens & Alarms
+      description: Select the sirens or switches to turn on when the alarm goes off.
+      default: []
+      selector:
+        entity:
+          filter:
+            - domain: siren
+            - domain: switch
+            - domain: light
+          multiple: true
+    notify_device:
+      name: Notification Device
+      description: (Optional) Select a mobile app device to receive a push notification when triggered.
+      default: ""
+      selector:
+        device:
+          integration: mobile_app
+
+variables:
+  device_trackers_var: !input device_trackers
+  notify_device: !input notify_device
+  sirens_var: !input sirens
+
+trigger:
+  - platform: state
+    entity_id: !input door_window_sensors
+    to: "on"
+  - platform: state
+    entity_id: !input motion_sensors
+    to: "on"
+
+condition:
+  # 1. Ensure the alarm is enabled
+  - condition: state
+    entity_id: !input alarm_enable
+    state: "on"
+  # 2. If trackers are provided, ensure everyone is away
+  - condition: template
+    value_template: >
+      {% if device_trackers_var | length == 0 %}
+        true
+      {% else %}
+        {% set trackers = expand(device_trackers_var) %}
+        {% set home_trackers = trackers | selectattr('state', 'eq', 'home') | list %}
+        {{ home_trackers | length == 0 }}
+      {% endif %}
+
+action:
+  # Action 1: Send Notification if a device is selected
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ notify_device != '' and notify_device != none }}"
+        sequence:
+          - domain: mobile_app
+            type: notify
+            device_id: "{{ notify_device }}"
+            message: "⚠️ ALARM TRIGGERED by {{ trigger.to_state.name }}!"
+            title: "Security Alert"
+  # Action 2: Turn on sirens if any are selected
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ sirens_var | length > 0 }}"
+        sequence:
+          - service: homeassistant.turn_on
+            target:
+              entity_id: !input sirens
