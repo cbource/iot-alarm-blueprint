@@ -1,0 +1,7 @@
+{
+  "name": "IoT Alarm Blueprint",
+  "render_readme": true,
+  "filename": "custom_iot_alarm.yaml",
+  "homeassistant": "2023.8.0",
+  "description": "A custom Home Assistant blueprint for an IoT Alarm system."
+}
