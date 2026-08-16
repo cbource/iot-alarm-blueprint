@@ -65,15 +65,13 @@ blueprint:
           multiple: true
     notify_device:
       name: Notification Device
-      description: (Optional) Select a mobile app device to receive a push notification when triggered.
-      default: ""
+      description: Select a mobile app device to receive a push notification when triggered.
       selector:
         device:
           integration: mobile_app
 
 variables:
   device_trackers_var: !input device_trackers
-  notify_device: !input notify_device
   sirens_var: !input sirens
 
 trigger:
@@ -114,33 +112,28 @@ action:
               entity_id: !input sirens
 
   # Action 2: Send Actionable Notification to silence alarms
+  - domain: mobile_app
+    type: notify
+    device_id: !input notify_device
+    message: "⚠️ ALARM TRIGGERED by {{ trigger.to_state.name }}!"
+    title: "Security Alert"
+    data:
+      actions:
+        - action: "SILENCE_ALARM"
+          title: "Silence Alarms"
+  - wait_for_trigger:
+      - platform: event
+        event_type: mobile_app_notification_action
+        event_data:
+          action: "SILENCE_ALARM"
+    timeout:
+      hours: 1
+    continue_on_timeout: false
   - choose:
       - conditions:
           - condition: template
-            value_template: "{{ notify_device != '' and notify_device != none }}"
+            value_template: "{{ sirens_var | length > 0 }}"
         sequence:
-          - domain: mobile_app
-            type: notify
-            device_id: "{{ notify_device }}"
-            message: "⚠️ ALARM TRIGGERED by {{ trigger.to_state.name }}!"
-            title: "Security Alert"
-            data:
-              actions:
-                - action: "SILENCE_ALARM_{{ context.id }}"
-                  title: "Silence Alarms"
-          - wait_for_trigger:
-              - platform: event
-                event_type: mobile_app_notification_action
-                event_data:
-                  action: "SILENCE_ALARM_{{ context.id }}"
-            timeout:
-              hours: 1
-            continue_on_timeout: false
-          - choose:
-              - conditions:
-                  - condition: template
-                    value_template: "{{ sirens_var | length > 0 }}"
-                sequence:
-                  - service: homeassistant.turn_off
-                    target:
-                      entity_id: !input sirens
+          - service: homeassistant.turn_off
+            target:
+              entity_id: !input sirens
