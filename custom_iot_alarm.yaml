@@ -101,7 +101,7 @@ blueprint:
         time: {}
     night_excluded_sensors:
       name: Night Mode Excluded Sensors
-      description: Select sensors to IGNORE during night mode (e.g., hallway motion sensors so you can go to the bathroom).
+      description: Select sensors to IGNORE during night mode (e.g., hallway motion sensors so you can go to the bathroom). Note: Due to a Home Assistant limitation, this list shows all binary sensors, not just the ones you selected above. Just search for the specific ones you want to exclude!
       default: []
       selector:
         entity:
