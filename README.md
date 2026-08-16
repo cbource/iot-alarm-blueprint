@@ -10,6 +10,7 @@ A powerful, highly customizable Home Assistant Blueprint for a DIY IoT Alarm Sys
 - **Geo-fencing / Away Mode**: Optionally select Device Trackers or Persons. The alarm will only trigger if everyone selected is marked as `not_home`.
 - **Instant Sirens**: Trigger multiple sirens, lights, or switches immediately upon an intrusion.
 - **Actionable Mobile Notifications**: Get an instant push notification via the Home Assistant mobile app with exactly what triggered the alarm, plus a built-in **Silence Alarms** button to verify and turn off the sirens directly from your lock screen.
+- **Night Mode Schedule**: Optionally set a timeframe where the alarm automatically bypasses geo-fencing (allowing you to arm while sleeping inside) and ignores selected sensors (like hallway motion).
 
 ## Installation
 

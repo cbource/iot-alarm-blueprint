@@ -101,7 +101,7 @@ blueprint:
         time: {}
     night_excluded_sensors:
       name: Night Mode Excluded Sensors
-      description: Select sensors to IGNORE during night mode (e.g., hallway motion sensors so you can go to the bathroom). Note: Due to a Home Assistant limitation, this list shows all binary sensors, not just the ones you selected above. Just search for the specific ones you want to exclude!
+      description: "Select sensors to IGNORE during night mode (e.g., hallway motion sensors so you can go to the bathroom). Note: Due to a Home Assistant limitation, this list shows all binary sensors, not just the ones you selected above. Just search for the specific ones you want to exclude!"
       default: []
       selector:
         entity:
@@ -227,7 +227,7 @@ action:
           # Entry Delay
           - delay:
               seconds: !input trigger_delay
-              
+
           # Ensure the alarm wasn't disarmed during the delay
           - condition: state
             entity_id: !input alarm_enable
@@ -257,7 +257,7 @@ action:
             timeout:
               hours: 1
             continue_on_timeout: false
-            
+
           # Action 3: Silence Alarms (executes user-defined actions)
           - choose:
               - conditions: []
