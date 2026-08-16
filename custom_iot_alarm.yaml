@@ -64,6 +64,15 @@ blueprint:
       default: []
       selector:
         action: {}
+    trigger_delay:
+      name: Entry Delay (Seconds)
+      description: How many seconds to wait before sounding the alarms. This gives you time to open the app and disarm it when you walk in.
+      default: 10
+      selector:
+        number:
+          min: 0
+          max: 300
+          unit_of_measurement: seconds
     notify_device:
       name: Notification Device
       description: Select a mobile app device to receive a push notification when triggered.
@@ -98,9 +107,18 @@ condition:
         {{ home_trackers | length == 0 }}
       {% endif %}
 
-mode: restart
+mode: single
 
 action:
+  # Entry Delay
+  - delay:
+      seconds: !input trigger_delay
+      
+  # Ensure the alarm wasn't disarmed during the delay
+  - condition: state
+    entity_id: !input alarm_enable
+    state: "on"
+
   # Action 1: Trigger Alarms (executes user-defined actions)
   - choose:
       - conditions: []
