@@ -100,8 +100,20 @@ condition:
         {{ home_trackers | length == 0 }}
       {% endif %}
 
+mode: restart
+
 action:
-  # Action 1: Send Notification if a device is selected
+  # Action 1: Turn on sirens if any are selected
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ sirens_var | length > 0 }}"
+        sequence:
+          - service: homeassistant.turn_on
+            target:
+              entity_id: !input sirens
+
+  # Action 2: Send Actionable Notification to silence alarms
   - choose:
       - conditions:
           - condition: template
@@ -112,12 +124,23 @@ action:
             device_id: "{{ notify_device }}"
             message: "⚠️ ALARM TRIGGERED by {{ trigger.to_state.name }}!"
             title: "Security Alert"
-  # Action 2: Turn on sirens if any are selected
-  - choose:
-      - conditions:
-          - condition: template
-            value_template: "{{ sirens_var | length > 0 }}"
-        sequence:
-          - service: homeassistant.turn_on
-            target:
-              entity_id: !input sirens
+            data:
+              actions:
+                - action: "SILENCE_ALARM_{{ context.id }}"
+                  title: "Silence Alarms"
+          - wait_for_trigger:
+              - platform: event
+                event_type: mobile_app_notification_action
+                event_data:
+                  action: "SILENCE_ALARM_{{ context.id }}"
+            timeout:
+              hours: 1
+            continue_on_timeout: false
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ sirens_var | length > 0 }}"
+                sequence:
+                  - service: homeassistant.turn_off
+                    target:
+                      entity_id: !input sirens
