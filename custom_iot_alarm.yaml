@@ -73,12 +73,13 @@ blueprint:
           min: 0
           max: 300
           unit_of_measurement: seconds
-    notify_device:
-      name: Notification Device
-      description: Select a mobile app device to receive a push notification when triggered. To notify multiple devices, you must create a Notify Group in your configuration.yaml.
+    notify_services:
+      name: Notification Services
+      description: Select the mobile app notification entities (e.g., notify.mobile_app_your_phone). You can select multiple phones here without needing a group!
       selector:
-        device:
-          integration: mobile_app
+        entity:
+          domain: notify
+          multiple: true
 
 variables:
   device_trackers_var: !input device_trackers
@@ -125,15 +126,16 @@ action:
         sequence: !input alarm_actions
 
   # Send Actionable Notification to silence alarms
-  - domain: mobile_app
-    type: notify
-    device_id: !input notify_device
-    message: "⚠️ ALARM TRIGGERED by {{ trigger.to_state.name }}!"
-    title: "Security Alert"
+  - service: notify.send_message
+    target:
+      entity_id: !input notify_services
     data:
-      actions:
-        - action: "SILENCE_ALARM"
-          title: "Silence Alarms"
+      message: "⚠️ ALARM TRIGGERED by {{ trigger.to_state.name }}!"
+      title: "Security Alert"
+      data:
+        actions:
+          - action: "SILENCE_ALARM"
+            title: "Silence Alarms"
   - wait_for_trigger:
       - platform: event
         event_type: mobile_app_notification_action
