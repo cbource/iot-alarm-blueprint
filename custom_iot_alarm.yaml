@@ -84,69 +84,128 @@ blueprint:
 
 variables:
   device_trackers_var: !input device_trackers
+  door_sensors_var: !input door_window_sensors
+  motion_sensors_var: !input motion_sensors
+  open_sensors: >
+    {% set all = door_sensors_var + motion_sensors_var %}
+    {{ expand(all) | selectattr('state', 'eq', 'on') | map(attribute='name') | list }}
 
 trigger:
   - platform: state
     entity_id: !input door_window_sensors
     to: "on"
+    id: "alarm_trigger"
   - platform: state
     entity_id: !input motion_sensors
     to: "on"
+    id: "alarm_trigger"
+  - platform: state
+    entity_id: !input alarm_enable
+    to: "on"
+    id: "arming"
 
 condition:
-  # 1. Ensure the alarm is enabled
-  - condition: state
-    entity_id: !input alarm_enable
-    state: "on"
-  # 2. If trackers are provided, ensure everyone is away
-  - condition: template
-    value_template: >
-      {% if device_trackers_var | length == 0 %}
-        true
-      {% else %}
-        {% set trackers = expand(device_trackers_var) %}
-        {% set home_trackers = trackers | selectattr('state', 'eq', 'home') | list %}
-        {{ home_trackers | length == 0 }}
-      {% endif %}
+  - condition: or
+    conditions:
+      - condition: trigger
+        id: "arming"
+      - condition: and
+        conditions:
+          - condition: state
+            entity_id: !input alarm_enable
+            state: "on"
+          - condition: template
+            value_template: >
+              {% if device_trackers_var | length > 0 %}
+                {% set home_trackers = expand(device_trackers_var) | selectattr('state', 'eq', 'home') | list %}
+                {{ home_trackers | length == 0 }}
+              {% else %}
+                true
+              {% endif %}
 
 mode: single
 
 action:
-  # Entry Delay
-  - delay:
-      seconds: !input trigger_delay
-      
-  # Ensure the alarm wasn't disarmed during the delay
-  - condition: state
-    entity_id: !input alarm_enable
-    state: "on"
-
-  # Action 1: Trigger Alarms (executes user-defined actions)
   - choose:
-      - conditions: []
-        sequence: !input alarm_actions
+      # Branch 1: Alarm Arming Check
+      - conditions:
+          - condition: trigger
+            id: "arming"
+          - condition: template
+            value_template: "{{ open_sensors | length > 0 }}"
+        sequence:
+          - service: notify.send_message
+            target:
+              entity_id: !input notify_services
+            data:
+              message: "⚠️ Warning: The alarm was armed but these sensors are open: {{ open_sensors | join(', ') }}. Do you want to cancel?"
+              title: "Alarm Arming Check"
+              data:
+                actions:
+                  - action: "CANCEL_ARM"
+                    title: "Cancel Arming"
+                  - action: "BYPASS"
+                    title: "Bypass & Arm"
+          - wait_for_trigger:
+              - platform: event
+                event_type: mobile_app_notification_action
+                event_data:
+                  action: "CANCEL_ARM"
+              - platform: event
+                event_type: mobile_app_notification_action
+                event_data:
+                  action: "BYPASS"
+            timeout:
+              minutes: 1
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ wait.trigger is not none and wait.trigger.event.data.action == 'CANCEL_ARM' }}"
+                sequence:
+                  - service: input_boolean.turn_off
+                    target:
+                      entity_id: !input alarm_enable
 
-  # Send Actionable Notification to silence alarms
-  - service: notify.send_message
-    target:
-      entity_id: !input notify_services
-    data:
-      message: "⚠️ ALARM TRIGGERED by {{ trigger.to_state.name }}!"
-      title: "Security Alert"
-      data:
-        actions:
-          - action: "SILENCE_ALARM"
-            title: "Silence Alarms"
-  - wait_for_trigger:
-      - platform: event
-        event_type: mobile_app_notification_action
-        event_data:
-          action: "SILENCE_ALARM"
-    timeout:
-      hours: 1
-    continue_on_timeout: false
-    
-  # Action 3: Silence Alarms (executes user-defined actions)
-  - choose:
-      - conditions: []
-        sequence: !input silence_actions
+      # Branch 2: Alarm Triggered
+      - conditions:
+          - condition: trigger
+            id: "alarm_trigger"
+        sequence:
+          # Entry Delay
+          - delay:
+              seconds: !input trigger_delay
+              
+          # Ensure the alarm wasn't disarmed during the delay
+          - condition: state
+            entity_id: !input alarm_enable
+            state: "on"
+
+          # Action 1: Trigger Alarms (executes user-defined actions)
+          - choose:
+              - conditions: []
+                sequence: !input alarm_actions
+
+          # Send Actionable Notification to silence alarms
+          - service: notify.send_message
+            target:
+              entity_id: !input notify_services
+            data:
+              message: "⚠️ ALARM TRIGGERED by {{ trigger.to_state.name }}!"
+              title: "Security Alert"
+              data:
+                actions:
+                  - action: "SILENCE_ALARM"
+                    title: "Silence Alarms"
+          - wait_for_trigger:
+              - platform: event
+                event_type: mobile_app_notification_action
+                event_data:
+                  action: "SILENCE_ALARM"
+            timeout:
+              hours: 1
+            continue_on_timeout: false
+            
+          # Action 3: Silence Alarms (executes user-defined actions)
+          - choose:
+              - conditions: []
+                sequence: !input silence_actions
