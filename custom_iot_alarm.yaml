@@ -76,6 +76,7 @@ blueprint:
     notify_services:
       name: Notification Services
       description: Select the mobile app notification entities (e.g., notify.mobile_app_your_phone). You can select multiple phones here without needing a group!
+      default: []
       selector:
         entity:
           domain: notify
