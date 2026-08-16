@@ -1,8 +1,8 @@
 blueprint:
   name: Custom IoT Alarm System
   description: >
-    A custom alarm automation blueprint. It allows you to select an input_boolean to arm/disarm the alarm, 
-    and then select multiple door/window sensors and motion sensors. 
+    A custom alarm automation blueprint. It allows you to select an input_boolean to arm/disarm the alarm,
+    and then select multiple door/window sensors and motion sensors.
     If armed, any opening or motion will trigger the selected sirens and send a mobile notification.
     Optionally, you can select device trackers so that the alarm will only trigger if everyone is away (Geo-fencing).
   domain: automation
