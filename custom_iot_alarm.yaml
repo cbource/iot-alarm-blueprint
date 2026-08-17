@@ -1,10 +1,12 @@
 blueprint:
   name: Custom IoT Alarm System
-  description: >
-    A custom alarm automation blueprint. It allows you to select an input_boolean to arm/disarm the alarm,
-    and then select multiple door/window sensors and motion sensors.
-    If armed, any opening or motion will trigger the selected sirens and send a mobile notification.
-    Optionally, you can select device trackers so that the alarm will only trigger if everyone is away (Geo-fencing).
+  description: 'A custom alarm automation blueprint. It allows you to select an input_boolean
+    to arm/disarm the alarm, and then select multiple door/window sensors and motion
+    sensors. If armed, any opening or motion will trigger the selected sirens and
+    send a mobile notification. Optionally, you can select device trackers so that
+    the alarm will only trigger if everyone is away (Geo-fencing).
+
+    '
   domain: automation
   input:
     alarm_enable:
@@ -13,7 +15,10 @@ blueprint:
       selector:
         entity:
           filter:
-            domain: input_boolean
+          - domain:
+            - input_boolean
+          multiple: false
+          reorder: false
     door_window_sensors:
       name: Door / Window Sensors
       description: Select the door, window, or opening sensors to monitor.
@@ -21,13 +26,20 @@ blueprint:
       selector:
         entity:
           filter:
-            - domain: binary_sensor
-              device_class: door
-            - domain: binary_sensor
-              device_class: window
-            - domain: binary_sensor
-              device_class: opening
+          - domain:
+            - binary_sensor
+            device_class:
+            - door
+          - domain:
+            - binary_sensor
+            device_class:
+            - window
+          - domain:
+            - binary_sensor
+            device_class:
+            - opening
           multiple: true
+          reorder: false
     motion_sensors:
       name: Motion Sensors
       description: Select the motion, presence, or occupancy sensors to monitor.
@@ -35,80 +47,125 @@ blueprint:
       selector:
         entity:
           filter:
-            - domain: binary_sensor
-              device_class: motion
-            - domain: binary_sensor
-              device_class: occupancy
-            - domain: binary_sensor
-              device_class: presence
+          - domain:
+            - binary_sensor
+            device_class:
+            - motion
+          - domain:
+            - binary_sensor
+            device_class:
+            - occupancy
+          - domain:
+            - binary_sensor
+            device_class:
+            - presence
           multiple: true
+          reorder: false
     device_trackers:
       name: Device Trackers (Geo / Away Mode)
-      description: (Optional) If selected, the alarm will ONLY trigger if ALL these trackers are "not_home" (away).
+      description: (Optional) If selected, the alarm will ONLY trigger if ALL these
+        trackers are "not_home" (away).
       default: []
       selector:
         entity:
           filter:
-            - domain: device_tracker
-            - domain: person
+          - domain:
+            - device_tracker
+          - domain:
+            - person
           multiple: true
+          reorder: false
     alarm_actions:
       name: Alarm Trigger Actions
-      description: Define EXACTLY what happens when the alarm triggers. (e.g., Add Action -> Device -> Eufy -> Press Button, or Turn on Siren).
+      description: Define EXACTLY what happens when the alarm triggers. (e.g., Add
+        Action -> Device -> Eufy -> Press Button, or Turn on Siren).
       default: []
       selector:
         action: {}
     silence_actions:
       name: Silence Actions
-      description: Define EXACTLY what happens when you click 'Silence Alarms' on your phone. (e.g., Add Action -> Turn off Siren).
+      description: Define EXACTLY what happens when you click 'Silence Alarms' on
+        your phone. (e.g., Add Action -> Turn off Siren).
       default: []
       selector:
         action: {}
     trigger_delay:
       name: Entry Delay (Seconds)
-      description: How many seconds to wait before sounding the alarms. This gives you time to open the app and disarm it when you walk in.
+      description: How many seconds to wait before sounding the alarms. This gives
+        you time to open the app and disarm it when you walk in.
       default: 10
       selector:
         number:
-          min: 0
-          max: 300
+          min: 0.0
+          max: 300.0
           unit_of_measurement: seconds
+          step: 1.0
+          mode: slider
     notify_services:
       name: Notification Services
-      description: Select the mobile app notification entities (e.g., notify.mobile_app_your_phone). You can select multiple phones here without needing a group!
+      description: Select the mobile app notification entities (e.g., notify.mobile_app_your_phone).
+        You can select multiple phones here without needing a group!
       default: []
       selector:
         entity:
-          domain: notify
+          domain:
+          - notify
           multiple: true
+          reorder: false
     night_mode_enable:
       name: Enable Night Mode?
-      description: If enabled, during the specified time frame, the alarm will ignore Device Trackers (geofencing) so you can arm it while sleeping, and it will ignore the excluded sensors below.
+      description: If enabled, during the specified time frame, the alarm will ignore
+        Device Trackers (geofencing) so you can arm it while sleeping, and it will
+        ignore the excluded sensors below.
       default: false
       selector:
         boolean: {}
     night_start:
       name: Night Mode Start Time
       description: Time when night mode begins.
-      default: "23:00:00"
+      default: '23:00:00'
       selector:
         time: {}
     night_end:
       name: Night Mode End Time
       description: Time when night mode ends.
-      default: "06:00:00"
+      default: 06:00:00
       selector:
         time: {}
     night_excluded_sensors:
       name: Night Mode Excluded Sensors
-      description: "Select sensors to IGNORE during night mode (e.g., hallway motion sensors so you can go to the bathroom). Note: Due to a Home Assistant limitation, this list shows all binary sensors, not just the ones you selected above. Just search for the specific ones you want to exclude!"
+      description: 'Select sensors to IGNORE during night mode (e.g., hallway motion
+        sensors so you can go to the bathroom). Note: Due to a Home Assistant limitation,
+        this list shows all binary sensors, not just the ones you selected above.
+        Just search for the specific ones you want to exclude!'
       default: []
       selector:
         entity:
           filter:
-            - domain: binary_sensor
+          - domain:
+            - binary_sensor
           multiple: true
-
+          reorder: false
+    notify_on_open_sensors:
+      name: Check & Notify If Sensors Open When Arming
+      description: If enabled, checks whether any monitored sensors (e.g. open windows or doors) are currently open/triggered when Armed Mode is turned on.
+      default: true
+      selector:
+        boolean: {}
+    arm_confirmation_mode:
+      name: Open Sensors Confirmation Mode
+      description: Choose what happens if sensors are open when arming.
+      default: ask_confirmation
+      selector:
+        select:
+          options:
+          - label: "Ask for Confirmation (Actionable notification with 'Cancel Arming' & 'Bypass & Arm')"
+            value: ask_confirmation
+          - label: "Warning Notification Only (Send notification & stay armed)"
+            value: notify_only
+          - label: "Auto-Cancel (Send notification & disarm immediately)"
+            value: auto_cancel
+  source_url: https://github.com/cbource/iot-alarm-blueprint/blob/main/custom_iot_alarm.yaml
 variables:
   device_trackers_var: !input device_trackers
   door_sensors_var: !input door_window_sensors
@@ -117,7 +174,9 @@ variables:
   night_start_var: !input night_start
   night_end_var: !input night_end
   night_excluded_sensors_var: !input night_excluded_sensors
-  is_night: >
+  notify_on_open_sensors_var: !input notify_on_open_sensors
+  arm_confirmation_mode_var: !input arm_confirmation_mode
+  is_night: >-
     {% if night_mode_enable_var %}
       {% set current = now().strftime('%H:%M:%S') %}
       {% set start = night_start_var %}
@@ -130,135 +189,153 @@ variables:
     {% else %}
       false
     {% endif %}
-  open_sensors: >
+  open_sensors: >-
     {% set all = door_sensors_var + motion_sensors_var %}
     {{ expand(all) | selectattr('state', 'eq', 'on') | map(attribute='name') | list }}
-
 trigger:
-  - platform: state
-    entity_id: !input door_window_sensors
-    to: "on"
-    id: "alarm_trigger"
-  - platform: state
-    entity_id: !input motion_sensors
-    to: "on"
-    id: "alarm_trigger"
-  - platform: state
-    entity_id: !input alarm_enable
-    to: "on"
-    id: "arming"
-
+- platform: state
+  entity_id: !input door_window_sensors
+  to: 'on'
+  id: alarm_trigger
+- platform: state
+  entity_id: !input motion_sensors
+  to: 'on'
+  id: alarm_trigger
+- platform: state
+  entity_id: !input alarm_enable
+  to: 'on'
+  id: arming
 condition:
-  - condition: or
+- condition: or
+  conditions:
+  - condition: trigger
+    id: arming
+  - condition: and
     conditions:
-      - condition: trigger
-        id: "arming"
-      - condition: and
-        conditions:
-          - condition: state
-            entity_id: !input alarm_enable
-            state: "on"
-          - condition: template
-            value_template: >
-              {% if is_night and trigger.entity_id in night_excluded_sensors_var %}
-                false
-              {% else %}
-                true
-              {% endif %}
-          - condition: template
-            value_template: >
-              {% if is_night %}
-                true
-              {% elif device_trackers_var | length > 0 %}
-                {% set home_trackers = expand(device_trackers_var) | selectattr('state', 'eq', 'home') | list %}
-                {{ home_trackers | length == 0 }}
-              {% else %}
-                true
-              {% endif %}
-
+    - condition: state
+      entity_id: !input alarm_enable
+      state: 'on'
+    - condition: template
+      value_template: >-
+        {% if is_night | bool and trigger.entity_id in night_excluded_sensors_var %}
+          false
+        {% else %}
+          true
+        {% endif %}
+    - condition: template
+      value_template: >-
+        {% if is_night | bool %}
+          true
+        {% elif device_trackers_var | length > 0 %}
+          {% set home_trackers = expand(device_trackers_var) | selectattr('state', 'eq', 'home') | list %}
+          {{ home_trackers | length == 0 }}
+        {% else %}
+          true
+        {% endif %}
 mode: single
-
 action:
-  - choose:
-      # Branch 1: Alarm Arming Check
+- choose:
+  - conditions:
+    - condition: trigger
+      id: arming
+    - condition: template
+      value_template: >-
+        {{ notify_on_open_sensors_var | bool and open_sensors | length > 0 }}
+    sequence:
+    - choose:
       - conditions:
-          - condition: trigger
-            id: "arming"
-          - condition: template
-            value_template: "{{ open_sensors | length > 0 }}"
+        - condition: template
+          value_template: "{{ arm_confirmation_mode_var == 'ask_confirmation' }}"
         sequence:
-          - service: notify.send_message
-            target:
-              entity_id: !input notify_services
+        - service: notify.send_message
+          target:
+            entity_id: !input notify_services
+          data:
+            message: >-
+              ⚠️ Warning: The alarm was armed but these sensors are open: {{ open_sensors | join(', ') }}. Do you want to cancel?
+            title: Alarm Arming Check
             data:
-              message: "⚠️ Warning: The alarm was armed but these sensors are open: {{ open_sensors | join(', ') }}. Do you want to cancel?"
-              title: "Alarm Arming Check"
-              data:
-                actions:
-                  - action: "CANCEL_ARM"
-                    title: "Cancel Arming"
-                  - action: "BYPASS"
-                    title: "Bypass & Arm"
-          - wait_for_trigger:
-              - platform: event
-                event_type: mobile_app_notification_action
-                event_data:
-                  action: "CANCEL_ARM"
-              - platform: event
-                event_type: mobile_app_notification_action
-                event_data:
-                  action: "BYPASS"
-            timeout:
-              minutes: 1
-          - choose:
-              - conditions:
-                  - condition: template
-                    value_template: "{{ wait.trigger is not none and wait.trigger.event.data.action == 'CANCEL_ARM' }}"
-                sequence:
-                  - service: input_boolean.turn_off
-                    target:
-                      entity_id: !input alarm_enable
-
-      # Branch 2: Alarm Triggered
+              actions:
+              - action: CANCEL_ARM
+                title: Cancel Arming
+              - action: BYPASS
+                title: Bypass & Arm
+        - wait_for_trigger:
+          - platform: event
+            event_type: mobile_app_notification_action
+            event_data:
+              action: CANCEL_ARM
+          - platform: event
+            event_type: mobile_app_notification_action
+            event_data:
+              action: BYPASS
+          timeout:
+            minutes: 1
+          continue_on_timeout: true
+        - choose:
+          - conditions:
+            - condition: template
+              value_template: >-
+                {{ wait.trigger is not none and wait.trigger.event.data.action == 'CANCEL_ARM' }}
+            sequence:
+            - service: input_boolean.turn_off
+              target:
+                entity_id: !input alarm_enable
       - conditions:
-          - condition: trigger
-            id: "alarm_trigger"
+        - condition: template
+          value_template: "{{ arm_confirmation_mode_var == 'auto_cancel' }}"
         sequence:
-          # Entry Delay
-          - delay:
-              seconds: !input trigger_delay
-
-          # Ensure the alarm wasn't disarmed during the delay
-          - condition: state
+        - service: input_boolean.turn_off
+          target:
             entity_id: !input alarm_enable
-            state: "on"
-
-          # Action 1: Trigger Alarms (executes user-defined actions)
-          - choose:
-              - conditions: []
-                sequence: !input alarm_actions
-
-          # Send Actionable Notification to silence alarms
-          - service: notify.send_message
-            target:
-              entity_id: !input notify_services
-            data:
-              message: "⚠️ ALARM TRIGGERED by {{ trigger.to_state.name }}!"
-              title: "Security Alert"
-              data:
-                actions:
-                  - action: "SILENCE_ALARM"
-                    title: "Silence Alarms"
-          - wait_for_trigger:
-              - platform: event
-                event_type: mobile_app_notification_action
-                event_data:
-                  action: "SILENCE_ALARM"
-            timeout:
-              hours: 1
-            continue_on_timeout: false
-
-          # Action 3: Silence Alarms (executes user-defined actions)
-          - choose:
-              - conditions: []
-                sequence: !input silence_actions
+        - service: notify.send_message
+          target:
+            entity_id: !input notify_services
+          data:
+            message: >-
+              ⚠️ Arming Cancelled: The following sensors are open: {{ open_sensors | join(', ') }}. The alarm has been disarmed.
+            title: Alarm Arming Cancelled
+      - conditions:
+        - condition: template
+          value_template: "{{ arm_confirmation_mode_var == 'notify_only' }}"
+        sequence:
+        - service: notify.send_message
+          target:
+            entity_id: !input notify_services
+          data:
+            message: >-
+              ⚠️ Warning: The alarm was armed while these sensors were open: {{ open_sensors | join(', ') }}.
+            title: Alarm Armed (Sensors Open)
+  - conditions:
+    - condition: trigger
+      id: alarm_trigger
+    sequence:
+    - delay:
+        seconds: !input trigger_delay
+    - condition: state
+      entity_id: !input alarm_enable
+      state: 'on'
+    - choose:
+      - conditions: []
+        sequence: !input alarm_actions
+    - service: notify.send_message
+      target:
+        entity_id: !input notify_services
+      data:
+        message: ⚠️ ALARM TRIGGERED by {{ trigger.to_state.name }}!
+        title: Security Alert
+        data:
+          actions:
+          - action: SILENCE_ALARM
+            title: Silence Alarms
+    - wait_for_trigger:
+      - platform: event
+        event_type: mobile_app_notification_action
+        event_data:
+          action: SILENCE_ALARM
+      timeout:
+        hours: 1
+      continue_on_timeout: false
+    - choose:
+      - conditions: []
+        sequence: !input silence_actions
